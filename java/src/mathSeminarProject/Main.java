@@ -39,6 +39,8 @@ public class Main {
         Date compute_time = new Date();
         System.out.println("Total compute time: " + (compute_time.getTime() - start_time.getTime()) + "ms");
         outputImage(data);
+        Date img_time = new Date();
+        System.out.println("Image generation time: " + (img_time.getTime() - compute_time.getTime()) + "ms");
     }
 
     long[][] grid(int n, double zoom) {
@@ -46,14 +48,18 @@ public class Main {
         double n2 = n/2.0;
         int[] res = new int[2];
 
-        for (int xi = 0; xi < n; xi++) {
-            for (int yi = 0; yi < n; yi++) {
-                double x = zoom * (xi - n2),
-                        y = zoom * (yi - n2);
-                Complex p = new Complex(x, y);
-                solve(p, res);
-                result[xi][yi] = (((long)res[0]) << 32) | res[1];
-            }
+        for (c = 0; c < cores; c++) {
+            new Thread(() -> {
+                for (int xi0 = 0; xi0 < n; xi0 += c) {
+                    for (int yi = 0; yi < n; yi++) {
+                        double x = zoom * (xi - n2),
+                                y = zoom * (yi - n2);
+                        Complex p = new Complex(x, y);
+                        solve(p, res);
+                        result[xi][yi] = (((long) res[0]) << 32) | res[1];
+                    }
+                }
+            ).run();
         }
         return result;
     }
@@ -83,15 +89,14 @@ public class Main {
             Complex y = eval_poly(x, coeffs);
             if (y.nearZero()) break;
             Complex d = eval_poly(x, dcoeffs);
-            d.recip();
-            d.mul(y);
-            x.sub(d);
-            count++;
-            if (count > MANY) {
+            if (count++ > MANY || d.isZero()) {
                 result[0] = 0; // "root 0" represents failure to find a root
                 result[1] = MANY;
                 return;
             }
+            d.recip();
+            d.mul(y);
+            x.sub(d);
         }
         result[0] = whichRoot(x);
         result[1] = count;

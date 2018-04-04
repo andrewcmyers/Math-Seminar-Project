@@ -77,6 +77,10 @@ public class Complex {
                Math.abs(im) < SMALL;
     }
 
+    boolean isZero() {
+        return re == 0.0 && im == 0.0;
+    }
+
     public String toString() {
         return re + " + " + im + "i";
     }
