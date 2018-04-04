@@ -48,13 +48,13 @@ public class Main {
     synchronized long[][] grid(int n, double zoom) {
         long[][] result = new long[n][n];
         double n2 = n/2.0;
-        int[] res = new int[2];
 
-        cores /= 2;
+        cores = 2;
         System.out.println("Using " + cores + " cores");
         final AtomicInteger completed = new AtomicInteger(0);
         for (int c = 0; c < cores; c++) {
             final int c_ = c;
+            int[] res = new int[2];
             new Thread(() -> {
                 Complex p = new Complex();
                 for (int xi = c_; xi < n; xi += cores) {
@@ -82,14 +82,14 @@ public class Main {
         return result;
     }
 
-    Complex eval_poly(Complex x, double coeffs[]) {
-        Complex y = new Complex();
+    void eval_poly(Complex x, double coeffs[], Complex y) {
+        y.set(0., 0.);
         for (int i = coeffs.length - 1; i > 0; i--) {
             y.add(coeffs[i]);
             y.mul(x);
         }
         y.add(coeffs[0]);
-        return y;
+        return;
     }
 
     /**
@@ -103,10 +103,12 @@ public class Main {
      */
     void solve(Complex x, int[] result) {
         int count = 0;
+        Complex y = new Complex();
+        Complex d = new Complex();
         while (true) {
-            Complex y = eval_poly(x, coeffs);
+            eval_poly(x, coeffs, y);
             if (y.nearZero()) break;
-            Complex d = eval_poly(x, dcoeffs);
+            eval_poly(x, dcoeffs, d);
             if (count++ > MANY || d.isZero()) {
                 result[0] = 0; // "root 0" represents failure to find a root
                 result[1] = MANY;
@@ -138,8 +140,6 @@ public class Main {
     }
 
     private void outputImage(long[][] data) {
-
-        System.out.println("Generating image...");
         BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
         Graphics g = image.getGraphics();
 
