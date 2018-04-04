@@ -23,6 +23,14 @@ public class Complex {
     }
 
     /**
+     * Set this to a + bi
+     */
+    void set(double a, double b) {
+        re = a;
+        im = b;
+    }
+
+    /**
      * Effect: this += b
      */
     void add(double b) {

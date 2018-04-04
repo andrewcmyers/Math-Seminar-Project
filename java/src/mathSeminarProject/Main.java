@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 public class Main {
     int degree; // degree of polynomial
@@ -16,7 +18,7 @@ public class Main {
     int cores = Runtime.getRuntime().availableProcessors();
     double[] coeffs;
     double[] dcoeffs; // derivative coefficients
-    ArrayList<Complex> roots = new ArrayList<>();
+    ArrayList<Complex> roots = new ArrayList<Complex>();
     ArrayList<Color> colors = new ArrayList<>();
     static int MANY = 1000;
     static int DIMITER = 20;
@@ -43,23 +45,39 @@ public class Main {
         System.out.println("Image generation time: " + (img_time.getTime() - compute_time.getTime()) + "ms");
     }
 
-    long[][] grid(int n, double zoom) {
+    synchronized long[][] grid(int n, double zoom) {
         long[][] result = new long[n][n];
         double n2 = n/2.0;
         int[] res = new int[2];
 
-        for (c = 0; c < cores; c++) {
+        cores /= 2;
+        System.out.println("Using " + cores + " cores");
+        final AtomicInteger completed = new AtomicInteger(0);
+        for (int c = 0; c < cores; c++) {
+            final int c_ = c;
             new Thread(() -> {
-                for (int xi0 = 0; xi0 < n; xi0 += c) {
+                Complex p = new Complex();
+                for (int xi = c_; xi < n; xi += cores) {
                     for (int yi = 0; yi < n; yi++) {
                         double x = zoom * (xi - n2),
-                                y = zoom * (yi - n2);
-                        Complex p = new Complex(x, y);
+                               y = zoom * (yi - n2);
+                        p.set(x,y);
                         solve(p, res);
                         result[xi][yi] = (((long) res[0]) << 32) | res[1];
                     }
                 }
-            ).run();
+                completed.incrementAndGet();
+                synchronized(this) {
+                    this.notify();
+                }
+            }).start();
+        }
+        while (completed.get() < cores) {
+            try {
+                // System.out.println(completed.get() + " finished");
+                wait();
+            } catch (InterruptedException e) {
+            }
         }
         return result;
     }
@@ -102,14 +120,14 @@ public class Main {
         result[1] = count;
     }
 
-    int whichRoot(Complex x) {
+    synchronized int whichRoot(Complex x) {
         int i = 1;
         for (Complex r : roots) {
             if (r.near(x)) return i;
             i++;
         }
-        roots.add(x);
-        colors.add(randomColor(i-1));
+        roots.add(new Complex(x));
+        colors.add(randomColor(i - 1));
         return i;
     }
 
