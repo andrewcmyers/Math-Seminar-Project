@@ -154,11 +154,16 @@ public class Main {
     private void outputImage(long[][] data) {
         BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
         Graphics g = image.getGraphics();
+        long last_d = -1;
 
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                Color c = getColor(data[i][j]);
-                g.setColor(c);
+                long d = data[i][j];
+                if (d != last_d) {
+                    Color c = getColor(d);
+                    g.setColor(c);
+                    last_d = d;
+                }
                 g.drawRect(i, j, 1, 1);
             }
         }
