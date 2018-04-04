@@ -18,7 +18,10 @@ public class Main {
     int cores = Runtime.getRuntime().availableProcessors();
     double[] coeffs;
     double[] dcoeffs; // derivative coefficients
-    ArrayList<Complex> roots = new ArrayList<Complex>();
+    // ArrayList<Complex> roots = new ArrayList<Complex>();
+    static final int MAXROOTS = 64;
+    Complex[] roots = new Complex[MAXROOTS];
+    AtomicInteger nroots = new AtomicInteger();
     ArrayList<Color> colors = new ArrayList<>();
     static int MANY = 1000;
     static int DIMITER = 20;
@@ -49,7 +52,7 @@ public class Main {
         long[][] result = new long[n][n];
         double n2 = n/2.0;
 
-        cores = 2;
+        cores = 4;
         System.out.println("Using " + cores + " cores");
         final AtomicInteger completed = new AtomicInteger(0);
         for (int c = 0; c < cores; c++) {
@@ -122,15 +125,24 @@ public class Main {
         result[1] = count;
     }
 
-    synchronized int whichRoot(Complex x) {
+    int whichRoot(Complex x) {
         int i = 1;
-        for (Complex r : roots) {
-            if (r.near(x)) return i;
-            i++;
+        int n = nroots.get();
+        for (int ri = 0; ri < n; ri++) {
+            Complex r = roots[ri];
+            if (r.near(x)) return ri+1;
         }
-        roots.add(new Complex(x));
-        colors.add(randomColor(i - 1));
-        return i;
+        synchronized(this) {
+            int n2 = nroots.get();
+            for (int ri = n; ri < n2; ri++) {
+                Complex r = roots[ri];
+                if (r.near(x)) return ri+1;
+            }
+            roots[n2] = new Complex(x);
+            nroots.getAndIncrement();
+            colors.add(randomColor(i - 1));
+            return n2+1;
+        }
     }
 
     Random rand = new Random(1131);
