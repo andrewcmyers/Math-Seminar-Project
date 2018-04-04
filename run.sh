@@ -11,8 +11,9 @@ read l1
 l2=600
 l3=1
 l4=128
+l5=2
 
-while getopts ":gzi" opt; do
+while getopts ":gzic" opt; do
 	case "$opt" in
 	g)
 		printf "Grid Size: "
@@ -26,8 +27,12 @@ while getopts ":gzi" opt; do
 		printf "Iterations: "
 		read l4
 		;;
+	c)
+		printf "Contrast: "
+		read l5
+		;;
 	esac
 done
 
-printf "%s\n" "$l1" "$l2" $(bc -l <<< "($l2 * $l3 / 2)") "$l4" | python3 prompt.py | ./solver +RTS -N | python3 ./render.py "$l4"
+printf "%s\n" "$l1" "$l2" $(bc -l <<< "($l2 * $l3 / 2)") "$l4" | ./solver +RTS -N 2>/dev/null | python3 ./render.py "$l4" "$l5" 2>/dev/null
 echo Done

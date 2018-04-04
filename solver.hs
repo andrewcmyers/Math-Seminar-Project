@@ -1,38 +1,31 @@
 import Data.Complex
-import Data.List
-import Data.Ord
 import Control.Monad
-import Control.Parallel.Strategies
-import Control.DeepSeq
+import Control.Arrow
 
 main = do
-        c <- map read . words <$> getLine
+        c <- map read . words <$> getLine :: IO [Double]
         n <- readLn
-        z <- readLn
-        i <- readLn
-        let g = sortBy (comparing (negate . snd . fst)) $ grid c n z i
-        forM_ (zip <*> tail $ g) $ \(((_, b), d), ((_, e), _)) ->
-          if b == e
-            then (putStr . show) d >> putStr " "
-            else print d
-        print . snd . last $ g
+        z <- readLn :: IO Double
+        i <- readLn :: IO Integer
+        grid (map (:+ 0) c) n z i
 
-dif r = foldr1 ((<*>) . fmap (+)) $ r >>=
-            \a -> [foldr1 ((<*>) . fmap (*)) (flip (-) <$> delete a r)]
+dif r = poly $ zipWith (*) (init r) $ fromIntegral <$> iterate pred (length r - 1)
 
-poly r = foldr1 ((<*>) . fmap (*)) (flip (-) <$> r)
+poly [] _ = 0
+poly [r] _ = r
+poly (r:rs:rss) x = poly ((r * x + rs):rss) x
 
-solve x r eq der it = maybe [0, 0] id $ do
-                        nx <- solve' x eq der it
-                        let dr = (realPart . abs . subtract (fst nx)) <$> r
-                        sequence [succ <$> elemIndex (minimum dr) dr, Just $ snd nx]
-  where solve' x eq der 0 = Nothing
-        solve' x eq der it = let dx = eq x / der x
-                             in if (realPart . abs) dx < 1e-15
-                               then Just (x, fromIntegral it)
-                               else solve' (x - dx) eq der $ pred it
+solve _ _ _ 0 = (0, 0)
+solve x eq der it = let dx = eq x / der x
+                    in if (realPart . abs) dx < 1e-15
+                      then (x, it)
+                      else solve (x - dx) eq der $ pred it
 
-grid :: [Complex Double] -> Double -> Double -> Integer -> [((Double, Double), [Int])]
-grid r n z i = let rn = (/z) <$> [(-n)..n]
-                   grid = (,) <$> rn <*> rn
-               in parMap rdeepseq (\z -> (,) z $ solve (uncurry (:+) z) r (poly r) (dif r) i) grid
+grid r n z it = forM_ gr $ \i -> do
+                  forM_ gr $ \j -> do
+                    putStr . show . rnd $ solve (j :+ i) (poly r) (dif r) it
+                    putStr " "
+                  putStrLn []
+             where gr = (/z) <$> [(-n)..n]
+                   comp = do f <- show . realPart; g <- show . imagPart; return $ f ++ ":+" ++ g
+                   rnd = first $ comp . fmap ((/ 1e10) . fromIntegral . round . ((*) 1e10))
