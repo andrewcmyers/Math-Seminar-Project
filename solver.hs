@@ -28,4 +28,4 @@ grid r n z it = forM_ gr $ \i -> do
                   putStrLn []
              where gr = (/z) <$> [(-n)..n]
                    comp = do f <- show . realPart; g <- show . imagPart; return $ f ++ ":+" ++ g
-                   rnd = first $ comp . fmap ((/ 1e10) . fromIntegral . round . ((*) 1e10))
+                   rnd = first $ comp . fmap ((/ 1e10) . fromIntegral . round . (* 1e10))
